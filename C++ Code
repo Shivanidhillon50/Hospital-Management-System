@@ -1,0 +1,146 @@
+#include <iostream>
+#include <fstream>
+#include <queue>
+#include <string>
+#include <iomanip>
+using namespace std;
+
+struct Patient {
+    int id;
+    string name;
+    int age;
+    string type; // "Emergency" or "Normal"
+};
+
+// Comparison for priority queue
+struct ComparePriority {
+    bool operator()(const Patient &a, const Patient &b) {
+        // Emergency patients have higher priority
+        if (a.type == "Emergency" && b.type == "Normal") return false;
+        if (a.type == "Normal" && b.type == "Emergency") return true;
+        return a.id > b.id; // FIFO for same type
+    }
+};
+
+priority_queue<Patient, vector<Patient>, ComparePriority> pq;
+
+// Function to save data to file
+void saveToFile() {
+    ofstream file("patients.txt");
+    priority_queue<Patient, vector<Patient>, ComparePriority> temp = pq;
+
+    while (!temp.empty()) {
+        Patient p = temp.top();
+        file << p.id << "|" << p.name << "|" << p.age << "|" << p.type << endl;
+        temp.pop();
+    }
+    file.close();
+}
+
+// Function to load data from file
+void loadFromFile() {
+    ifstream file("patients.txt");
+    if (!file) return;
+    Patient p;
+    string line;
+    while (getline(file, line)) {
+        if (line.empty()) continue;
+        size_t p1 = line.find("|");
+        size_t p2 = line.find("|", p1 + 1);
+        size_t p3 = line.find("|", p2 + 1);
+
+        p.id = stoi(line.substr(0, p1));
+        p.name = line.substr(p1 + 1, p2 - p1 - 1);
+        p.age = stoi(line.substr(p2 + 1, p3 - p2 - 1));
+        p.type = line.substr(p3 + 1);
+        pq.push(p);
+    }
+    file.close();
+}
+
+// Function to add a new patient
+void addPatient() {
+    Patient p;
+    cout << "\nEnter Patient ID: ";
+    cin >> p.id;
+    cin.ignore();
+    cout << "Enter Name: ";
+    getline(cin, p.name);
+    cout << "Enter Age: ";
+    cin >> p.age;
+    int t;
+    cout << "Enter Type (1 = Emergency, 2 = Normal): ";
+    cin >> t;
+    p.type = (t == 1) ? "Emergency" : "Normal";
+
+    pq.push(p);
+    saveToFile();
+    cout << "\n Patient added successfully!\n";
+}
+
+// Function to display all patients
+void displayPatients() {
+    if (pq.empty()) {
+        cout << "\n  No patients in the queue.\n";
+        return;
+    }
+
+    cout << "\n-------------------------------------------------------------\n";
+    cout << setw(10) << "ID" << setw(20) << "Name" << setw(10) << "Age" << setw(15) << "Type" << endl;
+    cout << "-------------------------------------------------------------\n";
+
+    priority_queue<Patient, vector<Patient>, ComparePriority> temp = pq;
+
+    while (!temp.empty()) {
+        Patient p = temp.top();
+        temp.pop();
+        cout << setw(10) << p.id << setw(20) << p.name << setw(10) << p.age << setw(15) << p.type << endl;
+    }
+    cout << "-------------------------------------------------------------\n";
+}
+
+// Function to serve the next patient
+void servePatient() {
+    if (pq.empty()) {
+        cout << "\n No patients waiting.\n";
+        return;
+    }
+
+    Patient p = pq.top();
+    pq.pop();
+    saveToFile();
+
+    cout << "\n🩺 Now serving patient:\n";
+    cout << "ID: " << p.id << endl;
+    cout << "Name: " << p.name << endl;
+    cout << "Age: " << p.age << endl;
+    cout << "Type: " << p.type << endl;
+}
+
+int main() {
+    loadFromFile(); // Load data when program starts
+
+    int choice;
+    do {
+        cout << "\n=============================================\n";
+        cout << "       HOSPITAL MANAGEMENT SYSTEM       \n";
+        cout << "=============================================\n";
+        cout << "1. Add Patient\n";
+        cout << "2. Display All Patients\n";
+        cout << "3. Serve Next Patient\n";
+        cout << "4. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: addPatient(); break;
+            case 2: displayPatients(); break;
+            case 3: servePatient(); break;
+            case 4: cout << "\n Exiting program... Data saved.\n"; break;
+            default: cout << " Invalid choice! Try again.\n";
+        }
+
+    } while (choice != 4);
+
+    return 0;
+}
